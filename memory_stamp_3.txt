@@ -1,0 +1,9 @@
+Timestamp:  
+Number of processes in memory: 4
+Total external fragmentation: 0 bytes
+
+Memory:
+[0 - 4095] : Process 1
+[4096 - 8191] : Process 5
+[8192 - 12287] : Process 3
+[12288 - 16383] : Process 4
