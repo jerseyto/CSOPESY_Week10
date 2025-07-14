@@ -56,5 +56,21 @@ int main() {
     // Final snapshot
     memManager.printMemorySnapshot(3);
 
+    std::cout << "\nSimulating quantum cycles...\n";
+
+    for (int cycle = 1; cycle <= 12; ++cycle) {
+        std::cout << "Cycle: " << cycle << std::endl;
+
+        // Call snapshot every 4 cycles
+        if (cycle % 4 == 0) {
+            memManager.printMemorySnapshot(cycle);
+        }
+
+        // Optional simulation of memory change
+        if (cycle == 5) memManager.deallocateMemory(1);
+        if (cycle == 6) memManager.allocateMemory(6);
+    }
+
+
     return 0;
 }

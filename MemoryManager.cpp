@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iomanip>
+#include <ctime>
 
 MemoryManager::MemoryManager(int maxMem, int memPerFrame, int memPerProc)
     : memPerFrame(memPerFrame), memPerProc(memPerProc)
@@ -79,37 +80,48 @@ int MemoryManager::getProcessesInMemoryCount() {
     return uniqueProcessIds.size();
 }
 
-// Print memory layout
 void MemoryManager::printMemorySnapshot(int quantumCycle) {
-    std::ofstream outFile("memory_stamp_" + std::to_string(quantumCycle) + ".txt");
+    std::ofstream outFile("memory_stamp-" + std::to_string(quantumCycle) + ".txt");
 
-    // Timestamp
+    // Timestamp formatting
     auto now = std::chrono::system_clock::now();
     std::time_t timeStamp = std::chrono::system_clock::to_time_t(now);
-    outFile << "Timestamp: " << std::put_time(std::localtime(&timeStamp), "%F %T") << "\n";
+    std::tm timeInfo;
+    localtime_s(&timeInfo, &timeStamp);
+
+    char buffer[100];
+    std::strftime(buffer, sizeof(buffer), "(%m/%d/%Y %I:%M:%S%p)", &timeInfo);
+    outFile << "Timestamp: " << buffer << "\n";
 
     outFile << "Number of processes in memory: " << getProcessesInMemoryCount() << "\n";
-    outFile << "Total external fragmentation: " << calculateExternalFragmentation() << " bytes\n\n";
+    outFile << "Total external fragmentation in KB: " << calculateExternalFragmentation() / 1024 << "\n";
+    outFile << "----end--- = " << totalFrames * memPerFrame << "\n\n";
 
-    outFile << "Memory:\n";
+    // Print from top (end) to bottom (start)
+    int i = totalFrames - 1;
+    while (i >= 0) {
+        int currentPid = frameTable[i].processId;
+        int endAddr = (i + 1) * memPerFrame;
+        int count = 1;
 
-    int startAddr = 0;
-    int currentPid = frameTable[0].processId;
-
-    for (int i = 1; i <= totalFrames; ++i) {
-        if (i == totalFrames || frameTable[i].processId != currentPid) {
-            int endAddr = (i * memPerFrame) - 1;
-            if (currentPid == -1)
-                outFile << "[" << startAddr << " - " << endAddr << "] : Free\n";
-            else
-                outFile << "[" << startAddr << " - " << endAddr << "] : Process " << currentPid << "\n";
-
-            if (i < totalFrames) {
-                startAddr = i * memPerFrame;
-                currentPid = frameTable[i].processId;
-            }
+        // Count how many frames belong to this process/free block
+        while (i - 1 >= 0 && frameTable[i - 1].processId == currentPid) {
+            --i;
+            ++count;
         }
+
+        int startAddr = endAddr - (count * memPerFrame);
+
+        outFile << endAddr << "\n";
+        if (currentPid == -1)
+            outFile << "Free\n";
+        else
+            outFile << "P" << currentPid << "\n";
+        outFile << startAddr << "\n\n";
+
+        --i;
     }
 
+    outFile << "----start--- = 0\n";
     outFile.close();
 }
